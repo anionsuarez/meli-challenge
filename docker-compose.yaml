@@ -8,13 +8,22 @@ services:
       MYSQL_ROOT_PASSWORD: root
     ports:
       - 3306:3306
+    networks:
+      - challenge
 
   adminer:
     image: adminer
     restart: always
     ports:
       - 8080:8080
+    networks:
+      - challenge
 
   python:
     build: # La imagen que descargamos la vamos a usar para hacer una propia con el build
       context: ./python # y le vamos a pasar el Dockerfile que esta dentro del dir ./filebeat
+    networks:
+      - challenge
+
+networks:
+  challenge:

@@ -8,16 +8,14 @@ from google.oauth2 import service_account
 
 # import mysql.connector
 # from mysql.connector import errorcode
-# import MySQLdb
+import MySQLdb
 
 # If modifying these scopes, delete the file token.pickle.
 SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
 
 """Get a list of Messages from the user's mailbox.
 """
-
 from apiclient import errors
-
 
 def ListMessagesMatchingQuery(service, user_id, query=''):
   """List all Messages of the user's mailbox matching the query.
@@ -59,104 +57,56 @@ def main():
     # The file token.pickle stores the user's access and refresh tokens, and is
     # created automatically when the authorization flow completes for the first
     # time.
-    if os.path.exists('token.pickle'):
-        with open('token.pickle', 'rb') as token:
-            creds = pickle.load(token)
-    # else:
-    #     print('Antes de ejecutar este comando debe validar Gmail')
+    # --------
+    # if os.path.exists('token.pickle'):
+    #     with open('token.pickle', 'rb') as token:
+    #         creds = pickle.load(token)
 
-    # # If there are no (valid) credentials available, let the user log in.
-    # if not creds or not creds.valid:
-    #     if creds and creds.expired and creds.refresh_token:
-    #         creds.refresh(Request())
-    #     else:
-    #         flow = InstalledAppFlow.from_client_secrets_file(
-    #             'credentials.json', SCOPES)
-    #         creds = flow.run_local_server(port=0)
-    #     # Save the credentials for the next run
-    #     with open('token.pickle', 'wb') as token:
-    #         pickle.dump(creds, token)
-    try:
-      service = build('gmail', 'v1', credentials=creds)
+    # try:
+    #   service = build('gmail', 'v1', credentials=creds)
 
-      messages = ListMessagesMatchingQuery(service,'me','label: DO newsletter')
-      # f= open("ids.txt","w+")
+    #   messages = ListMessagesMatchingQuery(service,'me','label: DO newsletter')
+    #   # f= open("ids.txt","w+")
 
-      for message in messages:
-          print (message['id'])
-    except:
-      print('Antes de ejecutar este comando debe validar Gmail\n Ejecute:\npython3 first-run-validation.py')
-    
-    
-        # f.write("This is line %d\r\n" % (message))
+    #   for message in messages:
+    #       print (message['id'])
+    # except:
+    #   print('Antes de ejecutar este comando debe validar Gmail\n Ejecute:\npython3 first-run-validation.py')
+    # -------
+    dbasename='elmailingresado'
 
-    
- 
-    # dbasename='elmailingresado'
-    # db=MySQLdb.connect(passwd="root")
-    # db=
+    # Open database connection ( If database is not created don't give dbname)
+    db = MySQLdb.connect("challenge_db_1","root","root")
 
-    # # Open database connection ( If database is not created don't give dbname)
-    # db = MySQLdb.connect("localhost","root","root")
+    # prepare a cursor object using cursor() method
+    cursor = db.cursor()
 
-    # # prepare a cursor object using cursor() method
-    # cursor = db.cursor()
+    # For creating create db
+    # Below line  is hide your warning 
+    cursor.execute("SET sql_notes = 0; ")
+    # create db here....
+    cursor.execute("create database IF NOT EXISTS Writersdb")
 
-    # # For creating create db
-    # # Below line  is hide your warning 
-    # cursor.execute("SET sql_notes = 0; ")
-    # # create db here....
-    # cursor.execute("create database IF NOT EXISTS "+dbasename)
+    # create table
+    cursor.execute("SET sql_notes = 0; ")
+    cursor.execute("CREATE TABLE if not exists Writersdb.Writers(Id INT PRIMARY KEY AUTO_INCREMENT, \
+                Name VARCHAR(25))")
+    cursor.execute("SET sql_notes = 1; ")
 
+    #insert data
+    cursor.execute("INSERT INTO Writersdb.Writers(Name) VALUES('Jack London')")
 
+    # Commit your changes in the database
+    db.commit()
 
-    # # create table
-    # cursor.execute("SET sql_notes = 0; ")
-    # cursor.execute("create table IF NOT EXISTS test (email varchar(70),pwd varchar(20));")
-    # cursor.execute("SET sql_notes = 1; ")
-
-    # #insert data
-    # cursor.execute("insert into test (email,pwd) values('test@gmail.com','test')")
-
-    # # Commit your changes in the database
-    # db.commit()
-
-    # # disconnect from server
-    # db.close()
-
-
-# def create_database(cursor):
-#     try:
-#         cursor.execute(
-#             "CREATE DATABASE {} DEFAULT CHARACTER SET 'utf8'".format(DB_NAME))
-#     except mysql.connector.Error as err:
-#         print("Failed creating database: {}".format(err))
-#         exit(1)
-
-# DB_NAME = 'employees'
-
-# TABLES = {}
-# TABLES['employees'] = (
-#     "CREATE TABLE `employees` ("
-#     "  `emp_no` int(11) NOT NULL AUTO_INCREMENT,"
-#     "  `birth_date` date NOT NULL,"
-#     "  `first_name` varchar(14) NOT NULL,"
-#     "  `last_name` varchar(16) NOT NULL,"
-#     "  `gender` enum('M','F') NOT NULL,"
-#     "  `hire_date` date NOT NULL,"
-#     "  PRIMARY KEY (`emp_no`)"
-#     ") ENGINE=InnoDB")
-
-# try:
-#     cursor.execute("USE {}".format(DB_NAME))
-# except mysql.connector.Error as err:
-#     print("Database {} does not exists.".format(DB_NAME))
-#     if err.errno == errorcode.ER_BAD_DB_ERROR:
-#         create_database(cursor)
-#         print("Database {} created successfully.".format(DB_NAME))
-#         cnx.database = DB_NAME
-#     else:
-#         print(err)
-#         exit(1)
+    # disconnect from server
+    db.close()
 
 main()
+
+# CREATE TABLE `devops_mails` (
+#   `id` int NOT NULL AUTO_INCREMENT PRIMARY KEY,
+#   `date` date NOT NULL,
+#   `from` text COLLATE 'utf8_bin' NOT NULL,
+#   `subject` text COLLATE 'utf8_bin' NOT NULL
+# );

@@ -36,7 +36,7 @@ def main():
             with open('token.pickle', 'wb') as token:
                 pickle.dump(creds, token)
 
-        copyfile('token.pickle', 'python/token.pickle')
+        copyfile('token.pickle', 'python/token.pickle') # Lo copio porque despues el docker file no me deja seleccionar archivos por arriba de su nivel
         print ('\nYa se cargaron las credenciales, puede correr:\n docker-compose up -d --build\n')
 
 main()

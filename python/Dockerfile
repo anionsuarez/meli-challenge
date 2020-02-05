@@ -1,5 +1,8 @@
 FROM python:3.5-alpine
 
+RUN apk add --update \
+    mariadb-dev \
+    build-base
 # Packages that we need 
 COPY requirements.txt /app/
 WORKDIR /app
@@ -10,6 +13,7 @@ RUN pip install -r requirements.txt
 COPY . /app
 
 CMD [ "python", "./scrap-gmail.py" ]
+# CMD [ "python", "./test-myslq.py" ]
 
 # ENV PYTHONUNBUFFERED 1
 # RUN set -e; \
