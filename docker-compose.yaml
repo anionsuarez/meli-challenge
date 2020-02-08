@@ -20,8 +20,8 @@ services:
       - challenge
 
   python:
-    build: # La imagen que descargamos la vamos a usar para hacer una propia con el build
-      context: ./python # y le vamos a pasar el Dockerfile que esta dentro del dir ./filebeat
+    build: 
+      context: ./python
     networks:
       - challenge
 
