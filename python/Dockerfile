@@ -13,23 +13,4 @@ RUN pip install -r requirements.txt
 COPY . /app
 
 CMD [ "python", "./scrap-gmail.py" ]
-# CMD [ "python", "./test-myslq.py" ]
-
-# ENV PYTHONUNBUFFERED 1
-# RUN set -e; \
-#         apk add --no-cache --virtual .build-deps \
-#                 gcc \
-#                 libc-dev \
-#                 linux-headers \
-#                 mariadb-dev \
-#                 python3-dev \
-#                 postgresql-dev \
-#         ;
-# RUN mkdir /melichalenge
-# WORKDIR /melichalenge
-# # ENV REFRESHED_AT 2017-12-25
-# ADD requirements.txt /melichalenge/
-# RUN pip install --no-cache-dir -r /melichalenge/requirements.txt
-# RUN pip install uwsgi
-# ADD . /melichalenge/
-# CMD [ "python", "./scrap-gmail.py" ]
+# CMD [ "python", "./testsql.py" ]

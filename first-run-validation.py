@@ -18,7 +18,7 @@ def main():
     # The file token.pickle stores the user's access and refresh tokens, and is
     # created automatically when the authorization flow completes for the first
     # time.
-    if os.path.exists('token.pickle') or os.path.exists('python/token.pickle'):
+    if os.path.exists('python/token.pickle'):
         # with open('token.pickle', 'rb') as token:
         #     creds = pickle.load(token)
         #  Levanta las credenciales para poder usarlas, pero yo solo quiero avisar de que puede correr docker
@@ -37,6 +37,6 @@ def main():
                 pickle.dump(creds, token)
 
         copyfile('token.pickle', 'python/token.pickle') # Lo copio porque despues el docker file no me deja seleccionar archivos por arriba de su nivel
-        print ('\nYa se cargaron las credenciales, puede correr:\n docker-compose up -d --build\n')
+        print ('\nYa se cargaron las credenciales, puede correr:\n docker-compose up -d --build && docker logs -f challenge_python_1\n')
 
 main()

@@ -14,9 +14,6 @@ import dateutil.parser as parser
 
 import MySQLdb
 
-# from google.auth.exceptions import RefreshError
-# from google.api_core.exceptions import RetryError, ServiceUnavailable, NotFound
-
 SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
 
 """Get a list of Messages from the user's mailbox.
@@ -70,7 +67,6 @@ def GetMessage(service, user_id, msg_id):
     message = service.users().messages().get(userId=user_id, id=msg_id, format='metadata').execute()
 
     headers = message['payload']['headers']
-    asunto = 'SIN ASUNTO' # Para el caso de correos sin asunto 
     for header in headers:
       if header['name'] == "Date" :
         fecha_texto = header['value']
@@ -80,11 +76,13 @@ def GetMessage(service, user_id, msg_id):
         de = header['value']
       if header['name'] == "Subject" :
         asunto = header['value']
-
+    # fecha = [i['value'] for i in headers if i["name"]=="Date"]
+    # de = [i['value'] for i in headers if i["name"]=="From"]
+    # asunto = [i['value'] for i in headers if i["name"]=="Subject"]
     return (fecha,de,asunto)
 
   except errors.HttpError as error:
-    print ('Error al recuperar un mensaje: %s' % error)
+    print ('An error occurred: %s' % error)
 
 def database_setup(dbasename):
 
@@ -103,7 +101,7 @@ def database_setup(dbasename):
   # create table
   cursor.execute("SET sql_notes = 0; ")
   cursor.execute("CREATE TABLE if not exists "+dbasename+".correos(\
-                  `ID` varchar(25) NOT NULL PRIMARY KEY, \
+                  `ID` int NOT NULL PRIMARY KEY, \
                   `Fecha` date NOT NULL, \
                   `From` varchar(80) NOT NULL, \
                   `Subject` text NOT NULL) COLLATE 'utf8mb4_bin'")
@@ -131,59 +129,19 @@ def main():
     """Shows basic usage of the Gmail API.
     Lists the user's Gmail labels.
     """
-    creds = None
-    # The file token.pickle stores the user's access and refresh tokens, and is
-    # created automatically when the authorization flow completes for the first
-    # time.
-
-    if os.path.exists('token.pickle'):
-      try:
-        with open('token.pickle', 'rb') as token:
-          creds = pickle.load(token)
-        service = build('gmail', 'v1', credentials=creds)
-      except:
-        print('Error inesperado: ',sys.exc_info()[0])
-        print('Fin del script\n')
-        sys.exit()
-    else:
-      print('Antes de ejecutar este comando debe validar Gmail\n Ejecute:\npython3 first-run-validation.py')
-      sys.exit()
-      
-      
-    # except Exception as e:
-    #   if contains(e,"google.auth.exceptions.DefaultCredentialsError"):
-    #       print('Antes de ejecutar este comando debe validar Gmail\n Ejecute:\npython3 first-run-validation.py')
-    #       sys.exit()
-
-    # except "ServerNotFoundError":
-    #   print("No se puede encontrar www.googleapis.com")
-    #   sys.exit()
-    
-    
-    # messages = ListMessagesMatchingQuery(service,'me','is:unread subject:devops devops -in:chats')
-    messages = ListMessagesMatchingQuery(service,'me','devops -in:chats')
 
     dbasename='mailingresado'
     cursor,db = database_setup(dbasename)
-    id_lists = database_getID(dbasename,cursor)
-    inserts = 0
-    for message in messages:
-        if message['id'] not in id_lists:
-          fecha,de,asunto = GetMessage(service, 'me', message['id'])
-
-          database_store(dbasename,cursor,message['id'],fecha,de,asunto)
-          inserts += 1 
-
-    if inserts > 0 :
-      database_save(db)
-      print ("Se insertaron "+str(inserts)+" registros en la base de datos")
-    else:
-      print ("No hay correos nuevos que validen la busqueda")
+    ids = database_getID(dbasename,cursor)
     
-    print(datetime.now().strftime("%m/%d/%Y, %H:%M:%S")+" - Fin del script\n")
-
+    print (ids)
+    if 212 not in ids:
+      print ("No Esta")
+    
 main()
 
 # PENDIENTES
+# Guardar los id de los mensajes en la base, traerlos a una lista y en el loop consultar si esta en la lista
+# evito consultas de mas e inserto solo los nuevos.
 
 # Como plus, dejar como leido el mensaje
