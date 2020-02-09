@@ -6,37 +6,19 @@ from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from google.oauth2 import service_account
-
 from apiclient import errors
-
 from datetime import datetime
+from dateutil import tz
 import dateutil.parser as parser
-
 import MySQLdb
-
-# from google.auth.exceptions import RefreshError
-# from google.api_core.exceptions import RetryError, ServiceUnavailable, NotFound
 
 SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
 
-"""Get a list of Messages from the user's mailbox.
-"""
+# Defino el timezone de Uruguay, para imprimir mensajes mas adelante
+UYT = tz.tzoffset("UYT",-10800)
 
+# Lista todos los correos del usuario que cumplan con la query
 def ListMessagesMatchingQuery(service, user_id, query=''):
-  """List all Messages of the user's mailbox matching the query.
-
-  Args:
-    service: Authorized Gmail API service instance.
-    user_id: User's email address. The special value "me"
-    can be used to indicate the authenticated user.
-    query: String used to filter messages returned.
-    Eg.- 'from:user@some_domain.com' for Messages from a particular sender.
-
-  Returns:
-    List of Messages that match the criteria of the query. Note that the
-    returned list contains Message IDs, you must use get with the
-    appropriate ID to get the details of a Message.
-  """
   try:
     response = service.users().messages().list(userId=user_id,
                                                q=query).execute()
@@ -54,72 +36,57 @@ def ListMessagesMatchingQuery(service, user_id, query=''):
   except errors.HttpError as error:
     print ('An error occurred: %s' % error)
 
+# Pasado el id de un correo, devuelve su fecha, quien envia y el asunto
 def GetMessage(service, user_id, msg_id):
-  """Get a Message with given ID.
-
-  Args:
-    service: Authorized Gmail API service instance.
-    user_id: User's email address. The special value "me"
-    can be used to indicate the authenticated user.
-    msg_id: The ID of the Message required.
-
-  Returns:
-    A Message.
-  """
   try:
     message = service.users().messages().get(userId=user_id, id=msg_id, format='metadata').execute()
 
     headers = message['payload']['headers']
-    asunto = 'SIN ASUNTO' # Para el caso de correos sin asunto 
+    asunto = '-- SIN ASUNTO --' # Para el caso de correos sin asunto, seteo la variable con ese valor 
+    # Recorro los headers y busco la fecha, el origen y el asunto
     for header in headers:
       if header['name'] == "Date" :
         fecha_texto = header['value']
         parseo = (parser.parse(fecha_texto))
         fecha = (parseo.date())
+      
       if header['name'] == "From" :
         de = header['value']
+      
       if header['name'] == "Subject" :
         asunto = header['value']
-
     return (fecha,de,asunto)
-
   except errors.HttpError as error:
     print ('Error al recuperar un mensaje: %s' % error)
 
 def database_setup(dbasename):
-
-  # Open database connection ( If database is not created don't give dbname)
-  db = MySQLdb.connect("challenge_db_1","root","root")
-
-  # prepare a cursor object using cursor() method
+  # Me conecto al contenedor de la base de datos
+  db = MySQLdb.connect("database_container","root","root")
   cursor = db.cursor()
-
-  # For creating create db
-  # Below line  is hide your warning 
   cursor.execute("SET sql_notes = 0; ")
-  # create db here....
+  # Creo la base de datos si no existe
   cursor.execute("create database IF NOT EXISTS "+dbasename)
-
-  # create table
   cursor.execute("SET sql_notes = 0; ")
+  # Creo la tabla
   cursor.execute("CREATE TABLE if not exists "+dbasename+".correos(\
                   `ID` varchar(25) NOT NULL PRIMARY KEY, \
                   `Fecha` date NOT NULL, \
                   `From` varchar(80) NOT NULL, \
                   `Subject` text NOT NULL) COLLATE 'utf8mb4_bin'")
   cursor.execute("SET sql_notes = 1; ")
-
   return(cursor,db)
 
-def database_getID(dbasename,cursor): # Obtengo los IDs de cada correo que tengo guardado
+# Obtengo los IDs de los correos que tengo en la base de datos
+def database_getID(dbasename,cursor): 
   cursor.execute("SELECT ID FROM "+dbasename+".correos")
-  ids = cursor.fetchall() # Me devuelve una lista de listas, hago un recursivo para dejar todo en una lista unica
+  ids = cursor.fetchall() # Me devuelve una lista de listas, hago un recursivo para dejar todo en lista_unica
   lista_unica = []
   for sublist in ids:
     for item in sublist:
-        lista_unica.append(item)
+      lista_unica.append(item)
   return (lista_unica)
 
+# Guardo de a un mail a la vez
 def database_store(dbasename,cursor,mail_id,fecha,de,asunto):
   cursor.execute("INSERT INTO "+dbasename+".correos (`ID`,`Fecha`, `From`, `Subject`) VALUES (%s, %s, %s, %s)", (mail_id,fecha,de,asunto))
 
@@ -128,62 +95,49 @@ def database_save(db):
   db.close() 
 
 def main():
-    """Shows basic usage of the Gmail API.
-    Lists the user's Gmail labels.
-    """
-    creds = None
-    # The file token.pickle stores the user's access and refresh tokens, and is
-    # created automatically when the authorization flow completes for the first
-    # time.
-
-    if os.path.exists('token.pickle'):
-      try:
-        with open('token.pickle', 'rb') as token:
-          creds = pickle.load(token)
-        service = build('gmail', 'v1', credentials=creds)
-      except:
-        print('Error inesperado: ',sys.exc_info()[0])
-        print('Fin del script\n')
-        sys.exit()
-    else:
-      print('Antes de ejecutar este comando debe validar Gmail\n Ejecute:\npython3 first-run-validation.py')
+  creds = None
+  # The file token.pickle stores the user's access and refresh tokens, and is
+  # created automatically when the authorization flow completes for the first
+  # time.
+  if os.path.exists('token.pickle'):
+    try:
+      with open('token.pickle', 'rb') as token:
+        creds = pickle.load(token)
+      service = build('gmail', 'v1', credentials=creds)
+    except:
+      # Capturo el error del llamado a la api
+      print('Error inesperado: ',sys.exc_info()[0])
+      print('Fin del script\n')
       sys.exit()
-      
-      
-    # except Exception as e:
-    #   if contains(e,"google.auth.exceptions.DefaultCredentialsError"):
-    #       print('Antes de ejecutar este comando debe validar Gmail\n Ejecute:\npython3 first-run-validation.py')
-    #       sys.exit()
+  else:
+    # Si no tengo el token.pickle tengo que correr la validación primero
+    print('Antes de ejecutar este comando debe validar Gmail\n Ejecute:\npython3 first-run-validation.py')
+    sys.exit()
+  # Levanto todos los correos que validen con la búsqueda, busco devops excluyendo los chats
+  messages = ListMessagesMatchingQuery(service,'me','devops -in:chats')
+  # Levanto la info del profile, me quedo con el correo
+  profile = service.users().getProfile(userId='me').execute()
+  # Uso el username como nombre de la base de datos
+  dbasename = profile['emailAddress'].split('@')[0]
+  
+  cursor,db = database_setup(dbasename)
+  id_lists = database_getID(dbasename,cursor)
+  inserts = 0
+  # Recorro cada ID de mensaje que devuelve la búsqueda
+  for message in messages:
+      # Si no lo tengo en id_list, obtengo el mensaje completo
+      if message['id'] not in id_lists:
+        fecha,de,asunto = GetMessage(service, 'me', message['id'])
+        # Lo guardo
+        database_store(dbasename,cursor,message['id'],fecha,de,asunto)
+        inserts += 1 
 
-    # except "ServerNotFoundError":
-    #   print("No se puede encontrar www.googleapis.com")
-    #   sys.exit()
-    
-    
-    # messages = ListMessagesMatchingQuery(service,'me','is:unread subject:devops devops -in:chats')
-    messages = ListMessagesMatchingQuery(service,'me','devops -in:chats')
-
-    dbasename='mailingresado'
-    cursor,db = database_setup(dbasename)
-    id_lists = database_getID(dbasename,cursor)
-    inserts = 0
-    for message in messages:
-        if message['id'] not in id_lists:
-          fecha,de,asunto = GetMessage(service, 'me', message['id'])
-
-          database_store(dbasename,cursor,message['id'],fecha,de,asunto)
-          inserts += 1 
-
-    if inserts > 0 :
-      database_save(db)
-      print ("Se insertaron "+str(inserts)+" registros en la base de datos")
-    else:
-      print ("No hay correos nuevos que validen la busqueda")
-    
-    print(datetime.now().strftime("%m/%d/%Y, %H:%M:%S")+" - Fin del script\n")
+  if inserts > 0 :
+    database_save(db)
+    print ("Se insertaron "+str(inserts)+" registros en la base de datos")
+  else:
+    print ("No hay correos nuevos que validen la busqueda")
+  
+  print(datetime.now(tz=UYT).strftime("%m/%d/%Y, %H:%M:%S")+" - Fin del script\n")
 
 main()
-
-# PENDIENTES
-
-# Como plus, dejar como leido el mensaje
