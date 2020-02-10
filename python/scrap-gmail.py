@@ -61,7 +61,7 @@ def GetMessage(service, user_id, msg_id):
 
 def database_setup(dbasename):
   # Me conecto al contenedor de la base de datos
-  db = MySQLdb.connect("database_container","root","root")
+  db = MySQLdb.connect("db","root","root")
   cursor = db.cursor()
   cursor.execute("SET sql_notes = 0; ")
   # Creo la base de datos si no existe
