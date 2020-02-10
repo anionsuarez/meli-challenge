@@ -20,8 +20,6 @@ services:
       - challenge
 
   python:
-    environment:
-      TZ: "America/Montevideo"
     build: 
       context: ./python
     networks:
